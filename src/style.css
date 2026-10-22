@@ -1461,8 +1461,9 @@ svg {
     );
   }
   .chapter-art .tile {
-    width: 20%;
-    height: 23%;
+    width: min(20%, 100px);
+    height: auto;
+    aspect-ratio: 0.66;
     top: 15%;
     border-radius: 6px;
     border-bottom-width: 7px;
@@ -1736,9 +1737,6 @@ svg {
   .project-overlay .text-link {
     font-size: 9px;
     padding: 7px 0;
-  }
-  .chapter-art .tile {
-    height: 21%;
   }
   .chapter-art .tile-left {
     top: 14%;
