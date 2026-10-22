@@ -260,28 +260,26 @@ export default function Chapters() {
           ))}
         </nav>
       )}
-      {(active === 0 || phase !== "idle") && (
-        <div
-          ref={layer}
-          className={`liquid-layer ${phase !== "idle" ? "is-active" : ""}`}
-          aria-hidden="true"
-        >
-          <div className="hero-orb">
-            <div className="liquid-surface" ref={surface}>
-              <div className="orb-halo" />
-              <Sphere expansion={expansion} />
-            </div>
-            <div className="orb-marker marker-top">
-              <span />
-              PYTHON / SQL
-            </div>
-            <div className="orb-marker marker-bottom">
-              TOOLS & GAMES
-              <span />
-            </div>
+      <div
+        ref={layer}
+        className={`liquid-layer ${phase !== "idle" ? "is-active" : ""} ${active !== 0 && phase === "idle" ? "is-dormant" : ""}`}
+        aria-hidden="true"
+      >
+        <Sphere expansion={expansion} />
+        <div className="hero-orb">
+          <div className="liquid-surface" ref={surface}>
+            <div className="orb-halo" />
+          </div>
+          <div className="orb-marker marker-top">
+            <span />
+            PYTHON / SQL
+          </div>
+          <div className="orb-marker marker-bottom">
+            TOOLS & GAMES
+            <span />
           </div>
         </div>
-      )}
+      </div>
       <main
         id="main"
         className="chapter-scroller"

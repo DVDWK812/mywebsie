@@ -10,53 +10,97 @@ const clamp = (value) => Math.max(0, Math.min(1, value));
 const smooth = (value) => value * value * (3 - 2 * value);
 const COVER = 0.72;
 
-// One reversible timeline drives the shell, pressure wave, iris and chapter swap.
 export default function useLiquidTransition() {
   const layer = useRef(null);
   const surface = useRef(null);
-  const expansion = useRef({ bloom: 0, reveal: 0, openingExtent: 0.32 });
-  const progress = useRef(0);
-  const target = useRef(0);
-  const frame = useRef(0);
-  const lastTime = useRef(0);
-  const scene = useRef(0);
-  const commit = useRef(null);
-  const auto = useRef(null);
+  const expansion = useRef({
+    bloom: 0,
+    reveal: 0,
+    enabled: true,
+    scaleX: 1,
+    scaleY: 1,
+    offsetX: 0,
+    offsetY: 0,
+  });
+  const metrics = useRef(null);
+  const progress = useRef(0),
+    target = useRef(0),
+    frame = useRef(0),
+    lastTime = useRef(0);
+  const scene = useRef(0),
+    commit = useRef(null),
+    auto = useRef(null);
+  const phaseRef = useRef("idle");
   const [phase, setPhase] = useState("idle");
 
-  const paint = useCallback((value) => {
-    const overlay = layer.current;
-    const orb = surface.current;
+  const changePhase = useCallback((next) => {
+    if (phaseRef.current === next) return;
+    phaseRef.current = next;
+    setPhase(next);
+  }, []);
+
+  const measure = useCallback(() => {
+    const overlay = layer.current,
+      orb = surface.current;
     if (!overlay || !orb) return;
-    // Measure the unscaled parent so reversing and resizing cannot compound transforms.
     const rect = orb.parentElement.getBoundingClientRect();
-    const diagonal = Math.hypot(innerWidth, innerHeight);
-    const scale =
-      (diagonal / (Math.min(rect.width, rect.height) * 0.58)) * 1.12;
-    const growth = smooth(clamp(value / COVER));
-    const reveal = smooth(clamp((value - COVER) / (1 - COVER)));
-    const size = Math.exp(Math.log(scale) * growth);
-    const stretch = Math.sin(growth * Math.PI) * 0.055;
-    const x = innerWidth / 2 - (rect.left + rect.width / 2);
-    const y = innerHeight / 2 - (rect.top + rect.height / 2);
-    orb.style.transform = `translate3d(${x * growth}px, ${y * growth}px, 0) scale(${size * (1 + stretch)}, ${size * (1 - stretch)})`;
-    overlay.style.opacity = String(1 - smooth(clamp((reveal - 0.65) / 0.35)));
-    const site = overlay.closest(".site");
-    site.style.setProperty(
-      "--home-opacity",
-      String(1 - smooth(clamp(value / 0.48))),
-    );
-    site.dataset.liquidProgress = value.toFixed(3);
-    expansion.current = {
-      bloom: growth,
-      reveal,
-      openingExtent: (diagonal / (rect.width * scale)) * 0.55 + 0.025,
+    const width = innerWidth,
+      height = innerHeight;
+    metrics.current = {
+      width,
+      height,
+      baseX: rect.width / width,
+      baseY: rect.height / height,
+      offsetX: ((rect.left + rect.width / 2) / width) * 2 - 1,
+      offsetY: 1 - ((rect.top + rect.height / 2) / height) * 2,
+      scale:
+        (Math.hypot(width, height) /
+          (Math.min(rect.width, rect.height) * 0.58)) *
+        1.12,
+      site: overlay.closest(".site"),
+      home: overlay.closest(".site").querySelector(".hero-layout"),
+      halo: orb.querySelector(".orb-halo"),
+      fallback: overlay.querySelector(".sphere-fallback"),
+      orbWidth: rect.width,
+      orbHeight: rect.height,
+      centerX: rect.left + rect.width / 2,
+      centerY: rect.top + rect.height / 2,
     };
   }, []);
 
-  useLayoutEffect(() => {
+  const paint = useCallback((value) => {
+    const overlay = layer.current,
+      m = metrics.current;
+    if (!overlay || !m) return;
+    const growth = smooth(clamp(value / COVER));
+    const reveal = smooth(clamp((value - COVER) / (1 - COVER)));
+    const size = Math.exp(Math.log(m.scale) * growth);
+    const stretch = Math.sin(growth * Math.PI) * 0.055;
+    // Projection changes inside a fixed-size WebGL buffer; no giant CSS texture.
+    const visual = expansion.current;
+    visual.enabled = value < 1;
+    visual.bloom = growth;
+    visual.reveal = reveal;
+    visual.scaleX = m.baseX * size * (1 + stretch);
+    visual.scaleY = m.baseY * size * (1 - stretch);
+    visual.offsetX = m.offsetX * (1 - growth);
+    visual.offsetY = m.offsetY * (1 - growth);
+    overlay.style.opacity = String(1 - smooth(clamp((reveal - 0.65) / 0.35)));
+    m.home.style.opacity = String(1 - smooth(clamp(value / 0.48)));
+    m.halo.style.opacity = String(1 - growth);
+    if (!m.fallback.parentElement.classList.contains("is-rendered")) {
+      m.fallback.style.width = `${m.orbWidth * 0.66}px`;
+      m.fallback.style.height = `${m.orbHeight * 0.66}px`;
+      m.fallback.style.transform = `translate(${m.centerX * (1 - growth) + (m.width / 2) * growth - m.orbWidth * 0.33}px, ${m.centerY * (1 - growth) + (m.height / 2) * growth - m.orbHeight * 0.33}px) scale(${size})`;
+    }
+    m.site.dataset.liquidProgress = value.toFixed(3);
+  }, []);
+
+  const refresh = useCallback(() => {
+    measure();
     paint(progress.current);
-  });
+  }, [measure, paint]);
+  useLayoutEffect(refresh, [refresh]);
 
   const tick = useCallback(
     function update(now) {
@@ -68,8 +112,8 @@ export default function useLiquidTransition() {
         target.current = a.from + (a.to - a.from) * smooth(elapsed);
         if (elapsed === 1) auto.current = null;
       }
-      const difference = target.current - progress.current;
-      progress.current += difference * (1 - Math.exp(-dt / 48));
+      progress.current +=
+        (target.current - progress.current) * (1 - Math.exp(-dt / 22));
       if (!auto.current && Math.abs(target.current - progress.current) < 0.0008)
         progress.current = target.current;
       const nextScene = progress.current >= COVER ? 1 : 0;
@@ -80,25 +124,28 @@ export default function useLiquidTransition() {
       paint(progress.current);
       const moving = auto.current || progress.current !== target.current;
       const inside = progress.current > 0 && progress.current < 1;
-      setPhase(inside || moving ? "scrubbing" : "idle");
+      changePhase(inside || moving ? "scrubbing" : "idle");
       if (moving) frame.current = requestAnimationFrame(update);
       else {
         frame.current = 0;
         lastTime.current = 0;
       }
     },
-    [paint],
+    [paint, changePhase],
   );
 
   const wake = useCallback(() => {
-    setPhase("scrubbing");
+    changePhase("scrubbing");
     if (!frame.current) frame.current = requestAnimationFrame(tick);
-  }, [tick]);
+  }, [tick, changePhase]);
 
   const input = useCallback(
     (delta, onScene) => {
       auto.current = null;
       commit.current = onScene;
+      // Reverse immediately instead of first finishing any queued forward motion.
+      if (delta * (target.current - progress.current) < 0)
+        target.current = progress.current;
       target.current = clamp(target.current + delta);
       wake();
       return target.current;
@@ -113,7 +160,7 @@ export default function useLiquidTransition() {
         from: progress.current,
         to: value,
         start: performance.now(),
-        duration: 520 * Math.abs(value - progress.current) + 80,
+        duration: 360 * Math.abs(value - progress.current) + 60,
       };
       wake();
     },
@@ -129,9 +176,9 @@ export default function useLiquidTransition() {
       progress.current = target.current = value;
       scene.current = value >= COVER ? 1 : 0;
       paint(value);
-      setPhase("idle");
+      changePhase("idle");
     },
-    [paint],
+    [paint, changePhase],
   );
 
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
@@ -142,7 +189,6 @@ export default function useLiquidTransition() {
       (progress.current > 0 && progress.current < 1),
     [],
   );
-  const refresh = useCallback(() => paint(progress.current), [paint]);
   return {
     layer,
     surface,

@@ -4,6 +4,8 @@ import * as THREE from "three";
 const vertexShader = `
   uniform float uTime;
   uniform float uBloom;
+  uniform vec2 uViewportScale;
+  uniform vec2 uOffset;
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec3 vWorld;
@@ -35,13 +37,13 @@ const vertexShader = `
     vPosition = viewPosition.xyz;
     vWorld = displaced;
     gl_Position = projectionMatrix * viewPosition;
+    gl_Position.xy = gl_Position.xy * uViewportScale + uOffset * gl_Position.w;
   }
 `;
 const fragmentShader = `
   uniform float uTime;
   uniform float uBloom;
   uniform float uReveal;
-  uniform float uOpeningExtent;
   uniform vec2 uResolution;
   varying vec3 vPosition;
   varying vec3 vNormal;
@@ -65,12 +67,12 @@ const fragmentShader = `
     color += core * sin(uBloom*3.14159265) * vec3(.11,.35,.29);
     color = pow(color, vec3(.85));
     // The shell unfolds from within, opening a liquid iris onto the next scene.
-    vec2 uv = gl_FragCoord.xy / uResolution - .5;
+    vec2 uv = (gl_FragCoord.xy / uResolution - .5) * uResolution / length(uResolution);
     float radius = length(uv);
     float angle = atan(uv.y, uv.x);
-    float opening = uReveal*uOpeningExtent;
-    float rim = radius + sin(angle*5. + uReveal*4.)*.018*sin(uReveal*3.14159265);
-    float alpha = uReveal > 0. ? smoothstep(opening-.018, opening+.018, rim) : 1.;
+    float opening = uReveal*.55;
+    float rim = radius + sin(angle*5. + uReveal*4.)*.012*sin(uReveal*3.14159265);
+    float alpha = uReveal > 0. ? smoothstep(opening-.012, opening+.012, rim) : 1.;
     float lip = exp(-pow((rim-opening)*70., 2.))*sin(uReveal*3.14159265);
     color += lip*vec3(.14,.4,.33);
     gl_FragColor = vec4(color, alpha);
@@ -94,7 +96,6 @@ export default function Sphere({ expansion }) {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 20);
     camera.position.z = 4.1;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.setClearColor(0x000000, 0);
     element.appendChild(renderer.domElement);
     const material = new THREE.ShaderMaterial({
@@ -104,22 +105,29 @@ export default function Sphere({ expansion }) {
         uTime: { value: 0 },
         uBloom: { value: 0 },
         uReveal: { value: 0 },
-        uOpeningExtent: { value: 0.32 },
+        uViewportScale: { value: new THREE.Vector2(1, 1) },
+        uOffset: { value: new THREE.Vector2(0, 0) },
         uResolution: { value: new THREE.Vector2(1, 1) },
       },
       transparent: true,
     });
-    const geometry = new THREE.SphereGeometry(1, 192, 128);
+    const geometry = new THREE.SphereGeometry(1, 96, 64);
     const sphere = new THREE.Mesh(geometry, material);
     sphere.rotation.set(0.12, 0, -0.2);
     scene.add(sphere);
     const resize = new ResizeObserver(() => {
       const width = element.clientWidth,
         height = element.clientHeight;
+      if (!width || !height) return;
+      renderer.setPixelRatio(
+        Math.min(
+          window.devicePixelRatio,
+          1.5,
+          Math.sqrt(1200000 / (width * height)),
+        ),
+      );
       renderer.setSize(width, height);
       renderer.getDrawingBufferSize(material.uniforms.uResolution.value);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
     });
     resize.observe(element);
     let visible = true,
@@ -141,7 +149,8 @@ export default function Sphere({ expansion }) {
       frame = requestAnimationFrame(render);
       const delta = previous ? Math.min((now - previous) / 1000, 0.05) : 0;
       previous = now;
-      if (!visible || document.hidden) return;
+      if (!visible || document.hidden || expansion?.current.enabled === false)
+        return;
       if (!media.matches) {
         elapsed += delta;
         material.uniforms.uTime.value = elapsed;
@@ -158,12 +167,20 @@ export default function Sphere({ expansion }) {
         sphere.scale.setScalar(1 + Math.sin(elapsed * 1.3) * 0.024);
         const transition = expansion?.current;
         material.uniforms.uBloom.value = transition?.bloom ?? 0;
-        material.uniforms.uOpeningExtent.value =
-          transition?.openingExtent ?? 0.32;
         material.uniforms.uReveal.value = transition?.reveal ?? 0;
       }
+      const projection = expansion?.current;
+      material.uniforms.uViewportScale.value.set(
+        projection?.scaleX ?? 1,
+        projection?.scaleY ?? 1,
+      );
+      material.uniforms.uOffset.value.set(
+        projection?.offsetX ?? 0,
+        projection?.offsetY ?? 0,
+      );
       renderer.render(scene, camera);
-      element.classList.add("is-rendered");
+      if (!element.classList.contains("is-rendered"))
+        element.classList.add("is-rendered");
     }
     frame = requestAnimationFrame(render);
     const contextLost = (e) => {

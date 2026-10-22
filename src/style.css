@@ -1948,11 +1948,21 @@ svg {
   z-index: 100;
   pointer-events: none;
 }
+.liquid-layer.is-dormant {
+  visibility: hidden;
+}
+.liquid-layer > .sphere-host .sphere-fallback {
+  inset: auto;
+  left: 0;
+  top: 0;
+}
+.liquid-layer > .sphere-host.is-rendered .sphere-fallback {
+  animation: none;
+}
 .liquid-surface {
   position: absolute;
   inset: 0;
   transform-origin: center;
-  will-change: transform;
 }
 .liquid-layer .hero-orb {
   width: min(54vw, 76dvh, 760px);

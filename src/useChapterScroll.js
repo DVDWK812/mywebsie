@@ -9,6 +9,9 @@ export const CHAPTER_IDS = [
   "contact",
 ];
 
+// The same signed distance drives expansion and retraction on every device.
+const SCRUB_DISTANCE = 360;
+
 export default function useChapterScroll(liquid) {
   const scroller = useRef(null);
   const current = useRef(0);
@@ -111,8 +114,7 @@ export default function useChapterScroll(liquid) {
       if (scrubbable(direction)) {
         // Keep a long wheel event from skipping the entire reversible timeline.
         const next = input(
-          Math.max(-160, Math.min(160, delta)) /
-            Math.max(620, root.clientHeight),
+          Math.max(-180, Math.min(180, delta)) / SCRUB_DISTANCE,
           swapScene,
         );
         if (next === 1) {
@@ -217,10 +219,7 @@ export default function useChapterScroll(liquid) {
       if (!engaged() && canScrollInside(touch.target, Math.sign(dy))) return;
       if (event.cancelable) event.preventDefault();
       touch.handled = true;
-      input(
-        dy / Math.max(360, Math.min(560, root.clientHeight * 0.75)),
-        swapScene,
-      );
+      input(dy / SCRUB_DISTANCE, swapScene);
     };
     const onTouchEnd = () => {
       touch = null;
