@@ -1,0 +1,47 @@
+# 黄文凯 · 个人主页
+
+深色个人作品集，使用 React、Three.js、Motion、Lucide 和 Vite。自定义实时液态球、解码文字、滚动入场、中英切换与响应式布局。所有图形与程序均在本地运行，没有在线字体、远程图片或 CDN 运行依赖。
+
+## 直接打开成品
+
+双击本项目的 `dist/index.html`，或上一层文件夹中的 `黄文凯-个人主页.html`。文件已包含全部代码与样式，无需安装软件或联网。浏览器需要开启 JavaScript。浏览器不支持 WebGL 时自动显示静态液态球。
+
+## 本地开发
+
+安装 Node.js 22 LTS，打开本文件夹的终端：
+
+```sh
+npm install
+npm run dev
+```
+
+打开终端显示的本地地址。构建成品：
+
+```sh
+npm run build
+```
+
+也可使用 pnpm，项目提供了 `pnpm-lock.yaml`，GitHub Actions 使用 pnpm 的锁定依赖。
+
+## 部署到 GitHub Pages
+
+1. 在 GitHub 创建一个仓库，将**本文件夹内的内容**上传到仓库的 `main` 分支，包括 `.github/workflows/deploy.yml` 和 `pnpm-lock.yaml`。
+2. 打开仓库的 **Settings → Pages → Build and deployment → Source**，选择 **GitHub Actions**。
+3. 在 **Actions** 页面等待 `Deploy portfolio to GitHub Pages` 完成；如果上传时还没有启用 Pages，选择该工作流的 **Run workflow** 再运行一次。
+4. 成功后在 **Settings → Pages** 或工作流的部署结果中打开网站。
+
+支持个人站点仓库和普通项目仓库，Vite 使用相对资源路径，无需修改仓库名或 base。站点无后端、无密钥。没有链接的云海拓荒仅展示介绍，不提供无效按钮。
+
+如需手动发布，也可将 `dist` 里的 `index.html` 上传到静态托管服务。
+
+## 内容与交互
+
+- 默认中文；中 / EN 切换整个网站，偏好保存在当前浏览器。限制本地存储时依然可正常切换。
+- 液态球随鼠标轻微转动，滚动离开后暂停渲染；自动适配设备像素密度。
+- 尊重系统的“减少动态效果”设置，停止动态解码、球体变形与装饰动画。
+- 联系方式为邮件直达、复制邮箱、GitHub、LinkedIn。文件协议等环境如不允许剪贴板，则提示手动复制。
+- 中文内容与联系方式来自本人提供的信息；英文为对应译文。项目插图为抽象视觉设计，不是项目截图。
+
+## 设计致谢
+
+视觉与交互灵感来自 [Hamish Williams](https://hamishw.com) 的 [portfolio](https://github.com/HamishMW/portfolio)，包括深色配色、竖排导航、液态球与解码文字。本项目独立实现，未复制其作品、图片或源代码。页脚保留设计灵感署名。
