@@ -24,7 +24,12 @@ import text from "./content";
 import useChapterScroll, { CHAPTER_IDS } from "./useChapterScroll";
 import useLiquidTransition from "./useLiquidTransition";
 
-function ChapterReveal({ active, children, className = "" }) {
+function ChapterReveal({
+  active,
+  children,
+  className = "",
+  immediate = false,
+}) {
   const reduced = useReducedMotion();
   return (
     <motion.div
@@ -32,8 +37,8 @@ function ChapterReveal({ active, children, className = "" }) {
       initial={false}
       animate={{ opacity: active ? 1 : 0, y: active || reduced ? 0 : 24 }}
       transition={{
-        duration: reduced ? 0 : 0.65,
-        delay: active && !reduced ? 0.12 : 0,
+        duration: reduced || immediate ? 0 : 0.65,
+        delay: active && !reduced && !immediate ? 0.12 : 0,
         ease: [0.22, 1, 0.36, 1],
       }}
     >
@@ -53,8 +58,9 @@ export default function Chapters() {
   const [menu, setMenu] = useState(false);
   const [copyState, setCopyState] = useState("idle");
   const copyTimer = useRef(null);
-  const { layer, surface, phase, leaveHome, expansion } = useLiquidTransition();
-  const { scroller, active, goTo } = useChapterScroll({ leaveHome });
+  const liquid = useLiquidTransition();
+  const { layer, surface, phase, expansion } = liquid;
+  const { scroller, active, goTo } = useChapterScroll(liquid);
   const t = text[lang];
   const labels = [
     lang === "zh" ? "首页" : "Home",
@@ -293,7 +299,11 @@ export default function Chapters() {
           aria-labelledby="hero-title"
         >
           <div className="hero-layout">
-            <ChapterReveal active={active === 0} className="hero-copy">
+            <ChapterReveal
+              active={active === 0}
+              immediate={phase !== "idle"}
+              className="hero-copy"
+            >
               <div className="eyebrow">
                 <span className="tiny-line" />
                 {t.name}
@@ -312,7 +322,11 @@ export default function Chapters() {
                 <ArrowUpRight size={20} />
               </a>
             </ChapterReveal>
-            <ChapterReveal active={active === 0} className="hero-about">
+            <ChapterReveal
+              active={active === 0}
+              immediate={phase !== "idle"}
+              className="hero-about"
+            >
               <div className="hero-about-scroll" id="about" data-chapter-scroll>
                 <div className="hero-about-intro">
                   <h2>{t.aboutTitle}</h2>
@@ -355,6 +369,7 @@ export default function Chapters() {
               </span>
               <ChapterReveal
                 active={active === i + 1}
+                immediate={phase !== "idle"}
                 className="project-overlay"
               >
                 <div className="project-copy" data-chapter-scroll>

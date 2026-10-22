@@ -9,46 +9,45 @@ export const CHAPTER_IDS = [
   "contact",
 ];
 
-// Native touch snapping; one wheel gesture or navigation key advances one chapter.
-export default function useChapterScroll({ leaveHome } = {}) {
+export default function useChapterScroll(liquid) {
   const scroller = useRef(null);
   const current = useRef(0);
-  const busy = useRef(false);
   const [active, setActive] = useState(0);
   const reduced = useReducedMotion();
-  const goTo = useCallback(
+  const { input, animateTo, reset, engaged, refresh } = liquid;
+  const position = useCallback(
     (index, instant = false) => {
       const root = scroller.current;
-      if (!root || busy.current) return;
+      if (!root) return;
       const next = Math.max(0, Math.min(CHAPTER_IDS.length - 1, index));
-      const position = (immediate) => {
-        current.current = next;
-        setActive(next);
-        root.scrollTo({
-          top: next * root.clientHeight,
-          behavior: immediate || reduced ? "instant" : "smooth",
-        });
-      };
+      current.current = next;
+      setActive(next);
+      root.scrollTo({
+        top: next * root.clientHeight,
+        behavior: instant || reduced ? "instant" : "smooth",
+      });
+      history.replaceState(null, "", `#${CHAPTER_IDS[next]}`);
+    },
+    [reduced],
+  );
+  const swapScene = useCallback((index) => position(index, true), [position]);
+  const goTo = useCallback(
+    (index, instant = false) => {
+      const next = Math.max(0, Math.min(CHAPTER_IDS.length - 1, index));
       if (
-        current.current === 0 &&
-        next > 0 &&
         !instant &&
         !reduced &&
-        leaveHome
+        current.current <= 1 &&
+        next <= 1 &&
+        (next !== current.current || engaged())
       ) {
-        busy.current = true;
-        root.scrollTo({ top: 0, behavior: "instant" });
-        Promise.resolve(
-          leaveHome(() => {
-            position(true);
-            history.replaceState(null, "", `#${CHAPTER_IDS[next]}`);
-          }),
-        ).finally(() => {
-          busy.current = false;
-        });
-      } else position(instant);
+        animateTo(next, swapScene);
+      } else {
+        reset(next === 0 ? 0 : 1);
+        position(next, instant);
+      }
     },
-    [reduced, leaveHome],
+    [animateTo, engaged, position, reduced, reset, swapScene],
   );
 
   useEffect(() => {
@@ -76,25 +75,25 @@ export default function useChapterScroll({ leaveHome } = {}) {
         ? inner.scrollTop + inner.clientHeight < inner.scrollHeight - 2
         : inner.scrollTop > 2;
     };
+    const isEditable = (target) =>
+      target.closest?.(
+        "input, textarea, select, [contenteditable=true], [role=dialog]",
+      );
+    const scrubbable = (direction) =>
+      !reduced &&
+      (engaged() ||
+        current.current === 0 ||
+        (current.current === 1 && direction < 0));
     const onWheel = (event) => {
       if (
         event.ctrlKey ||
         Math.abs(event.deltaX) > Math.abs(event.deltaY) ||
-        !event.deltaY
-      )
-        return;
-      if (
-        event.target.closest?.(
-          "input, textarea, select, [contenteditable=true]",
-        )
+        !event.deltaY ||
+        isEditable(event.target)
       )
         return;
       const direction = Math.sign(event.deltaY);
-      if (busy.current) {
-        event.preventDefault();
-        return;
-      }
-      if (canScrollInside(event.target, direction)) return;
+      if (!engaged() && canScrollInside(event.target, direction)) return;
       event.preventDefault();
       const now = performance.now();
       if (now - lastWheel > 180) {
@@ -102,7 +101,6 @@ export default function useChapterScroll({ leaveHome } = {}) {
         usedGesture = false;
       }
       lastWheel = now;
-      if (now < lockedUntil || usedGesture) return;
       const delta =
         event.deltaY *
         (event.deltaMode === 1
@@ -110,6 +108,20 @@ export default function useChapterScroll({ leaveHome } = {}) {
           : event.deltaMode === 2
             ? root.clientHeight
             : 1);
+      if (scrubbable(direction)) {
+        // Keep a long wheel event from skipping the entire reversible timeline.
+        const next = input(
+          Math.max(-160, Math.min(160, delta)) /
+            Math.max(620, root.clientHeight),
+          swapScene,
+        );
+        if (next === 1) {
+          usedGesture = true;
+          lockedUntil = now + 350;
+        }
+        return;
+      }
+      if (now < lockedUntil || usedGesture) return;
       if (Math.sign(total) !== direction) total = 0;
       total += delta;
       if (Math.abs(total) < 35) return;
@@ -118,18 +130,13 @@ export default function useChapterScroll({ leaveHome } = {}) {
       goTo(Math.round(root.scrollTop / root.clientHeight) + direction);
     };
     const onKey = (event) => {
-      if (document.querySelector(".mobile-nav")) return;
       if (
+        document.querySelector(".mobile-nav") ||
         event.altKey ||
         event.ctrlKey ||
         event.metaKey ||
-        event.defaultPrevented
-      )
-        return;
-      if (
-        event.target.closest?.(
-          "input, textarea, select, [contenteditable=true], [role=dialog]",
-        )
+        event.defaultPrevented ||
+        isEditable(event.target)
       )
         return;
       if (
@@ -146,17 +153,24 @@ export default function useChapterScroll({ leaveHome } = {}) {
       };
       if (event.key === "Home" || event.key === "End") {
         event.preventDefault();
-        goTo(event.key === "Home" ? 0 : CHAPTER_IDS.length - 1);
+        goTo(event.key === "Home" ? 0 : CHAPTER_IDS.length - 1, true);
       } else if (event.key in directions) {
-        if (canScrollInside(event.target, directions[event.key])) return;
+        const direction = directions[event.key];
+        if (!engaged() && canScrollInside(event.target, direction)) return;
         event.preventDefault();
-        if (!event.repeat) goTo(current.current + directions[event.key]);
+        if (event.key.startsWith("Arrow") && scrubbable(direction))
+          input(direction * 0.13, swapScene);
+        else if (!event.repeat)
+          goTo(
+            engaged() ? (direction > 0 ? 1 : 0) : current.current + direction,
+          );
       }
     };
     const onScroll = () => {
-      if (busy.current) return;
+      if (engaged()) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        if (engaged()) return;
         const index = Math.max(
           0,
           Math.min(
@@ -168,55 +182,54 @@ export default function useChapterScroll({ leaveHome } = {}) {
         setActive(index);
         clearTimeout(settle);
         settle = setTimeout(() => {
-          const id = CHAPTER_IDS[index];
-          if (location.hash !== `#${id}`)
-            history.replaceState(null, "", `#${id}`);
+          if (location.hash !== `#${CHAPTER_IDS[index]}`)
+            history.replaceState(null, "", `#${CHAPTER_IDS[index]}`);
         }, 150);
       });
     };
     let touch = null;
     const onTouchStart = (event) => {
-      if (event.touches.length !== 1) {
+      if (event.touches.length !== 1 || isEditable(event.target)) {
         touch = null;
         return;
       }
-      const point = event.touches[0];
+      const p = event.touches[0];
       touch = {
-        x: point.clientX,
-        y: point.clientY,
+        x: p.clientX,
+        y: p.clientY,
         target: event.target,
-        home: current.current === 0,
-        used: false,
+        handled: false,
       };
     };
     const onTouchMove = (event) => {
-      if (busy.current) {
-        event.preventDefault();
-        return;
-      }
+      if (!touch || event.touches.length !== 1) return;
+      const p = event.touches[0],
+        dy = touch.y - p.clientY,
+        dx = Math.abs(touch.x - p.clientX);
+      touch.x = p.clientX;
+      touch.y = p.clientY;
       if (
-        !touch ||
-        event.touches.length !== 1 ||
-        !touch.home ||
-        reduced ||
-        !leaveHome
+        !dy ||
+        Math.abs(dy) < dx ||
+        (!touch.handled && !scrubbable(Math.sign(dy)))
       )
         return;
-      const point = event.touches[0];
-      const dy = touch.y - point.clientY;
-      const dx = Math.abs(touch.x - point.clientX);
-      if (dy <= 0 || dy < dx || canScrollInside(touch.target, 1)) return;
-      event.preventDefault();
-      if (dy > 45 && !touch.used) {
-        touch.used = true;
-        goTo(1);
-      }
+      if (!engaged() && canScrollInside(touch.target, Math.sign(dy))) return;
+      if (event.cancelable) event.preventDefault();
+      touch.handled = true;
+      input(
+        dy / Math.max(360, Math.min(560, root.clientHeight * 0.75)),
+        swapScene,
+      );
     };
     const onTouchEnd = () => {
       touch = null;
     };
     const initial = requestAnimationFrame(readHash);
-    const resize = new ResizeObserver(() => goTo(current.current, true));
+    const resize = new ResizeObserver(() => {
+      position(current.current, true);
+      refresh();
+    });
     resize.observe(root);
     root.addEventListener("wheel", onWheel, { passive: false });
     root.addEventListener("scroll", onScroll, { passive: true });
@@ -242,6 +255,6 @@ export default function useChapterScroll({ leaveHome } = {}) {
       window.removeEventListener("hashchange", readHash);
       window.removeEventListener("popstate", readHash);
     };
-  }, [goTo, reduced, leaveHome]);
+  }, [goTo, position, reduced, input, engaged, swapScene, refresh]);
   return { scroller, active, goTo };
 }

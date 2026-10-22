@@ -1,110 +1,157 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
-// A pressure wave opens the liquid from its core; the next chapter follows immediately.
+const clamp = (value) => Math.max(0, Math.min(1, value));
+const smooth = (value) => value * value * (3 - 2 * value);
+const COVER = 0.72;
+
+// One reversible timeline drives the shell, pressure wave, iris and chapter swap.
 export default function useLiquidTransition() {
   const layer = useRef(null);
   const surface = useRef(null);
-  const animations = useRef([]);
-  const mounted = useRef(true);
-  const expansion = useRef({
-    active: false,
-    startedAt: 0,
-    duration: 660,
-    openingAt: 0,
-    openingDuration: 180,
-  });
+  const expansion = useRef({ bloom: 0, reveal: 0, openingExtent: 0.32 });
+  const progress = useRef(0);
+  const target = useRef(0);
+  const frame = useRef(0);
+  const lastTime = useRef(0);
+  const scene = useRef(0);
+  const commit = useRef(null);
+  const auto = useRef(null);
   const [phase, setPhase] = useState("idle");
 
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      animations.current.forEach((animation) => animation.cancel());
+  const paint = useCallback((value) => {
+    const overlay = layer.current;
+    const orb = surface.current;
+    if (!overlay || !orb) return;
+    // Measure the unscaled parent so reversing and resizing cannot compound transforms.
+    const rect = orb.parentElement.getBoundingClientRect();
+    const diagonal = Math.hypot(innerWidth, innerHeight);
+    const scale =
+      (diagonal / (Math.min(rect.width, rect.height) * 0.58)) * 1.12;
+    const growth = smooth(clamp(value / COVER));
+    const reveal = smooth(clamp((value - COVER) / (1 - COVER)));
+    const size = Math.exp(Math.log(scale) * growth);
+    const stretch = Math.sin(growth * Math.PI) * 0.055;
+    const x = innerWidth / 2 - (rect.left + rect.width / 2);
+    const y = innerHeight / 2 - (rect.top + rect.height / 2);
+    orb.style.transform = `translate3d(${x * growth}px, ${y * growth}px, 0) scale(${size * (1 + stretch)}, ${size * (1 - stretch)})`;
+    overlay.style.opacity = String(1 - smooth(clamp((reveal - 0.65) / 0.35)));
+    const site = overlay.closest(".site");
+    site.style.setProperty(
+      "--home-opacity",
+      String(1 - smooth(clamp(value / 0.48))),
+    );
+    site.dataset.liquidProgress = value.toFixed(3);
+    expansion.current = {
+      bloom: growth,
+      reveal,
+      openingExtent: (diagonal / (rect.width * scale)) * 0.55 + 0.025,
     };
   }, []);
 
-  const leaveHome = useCallback(async (navigate) => {
-    const overlay = layer.current;
-    const orb = surface.current;
-    if (!overlay || !orb || !orb.animate) {
-      navigate();
-      return;
-    }
-    const rect = orb.getBoundingClientRect();
-    const x = innerWidth / 2 - (rect.left + rect.width / 2);
-    const y = innerHeight / 2 - (rect.top + rect.height / 2);
-    const scale =
-      (Math.hypot(innerWidth, innerHeight) /
-        (Math.min(rect.width, rect.height) * 0.58)) *
-      1.12;
-    setPhase("expanding");
-    expansion.current = {
-      active: true,
-      startedAt: performance.now(),
-      duration: 660,
-      openingAt: 0,
-      openingDuration: 180,
-      openingExtent:
-        (Math.hypot(innerWidth, innerHeight) / (rect.width * scale)) * 0.55 +
-        0.025,
-    };
-    let navigated = false;
-    try {
-      const swell = orb.animate(
-        [
-          { transform: "translate3d(0, 0, 0) scale(1)", offset: 0 },
-          { transform: "translate3d(0, 0, 0) scale(.94, 1.035)", offset: 0.13 },
-          {
-            transform: `translate3d(${x * 0.16}px, ${y * 0.16}px, 0) scale(1.22, 1.12)`,
-            offset: 0.29,
-          },
-          {
-            transform: `translate3d(${x * 0.6}px, ${y * 0.6}px, 0) scale(${scale * 0.53}, ${scale * 0.58})`,
-            offset: 0.64,
-          },
-          {
-            transform: `translate3d(${x}px, ${y}px, 0) scale(${scale})`,
-            offset: 1,
-          },
-        ],
-        {
-          duration: expansion.current.duration,
-          easing: "cubic-bezier(.4, 0, .65, 1)",
-          fill: "forwards",
-        },
-      );
-      animations.current = [swell];
-      await swell.finished;
-      if (!mounted.current) return;
-      navigate();
-      navigated = true;
-      expansion.current.openingAt = performance.now();
-      setPhase("revealing");
-      const reveal = overlay.animate(
-        [
-          { opacity: 1, offset: 0 },
-          { opacity: 1, offset: 0.45 },
-          { opacity: 0, offset: 1 },
-        ],
-        {
-          duration: expansion.current.openingDuration,
-          easing: "ease-out",
-          fill: "forwards",
-        },
-      );
-      animations.current.push(reveal);
-      await reveal.finished;
-    } catch {
-      if (mounted.current && !navigated) navigate();
-    } finally {
-      if (mounted.current) {
-        overlay.style.opacity = "0";
-        setPhase("idle");
+  useLayoutEffect(() => {
+    paint(progress.current);
+  });
+
+  const tick = useCallback(
+    function update(now) {
+      const dt = Math.min(48, lastTime.current ? now - lastTime.current : 16);
+      lastTime.current = now;
+      if (auto.current) {
+        const a = auto.current;
+        const elapsed = clamp((now - a.start) / a.duration);
+        target.current = a.from + (a.to - a.from) * smooth(elapsed);
+        if (elapsed === 1) auto.current = null;
       }
-      animations.current.forEach((animation) => animation.cancel());
-      animations.current = [];
-      expansion.current.active = false;
-    }
-  }, []);
-  return { layer, surface, phase, leaveHome, expansion };
+      const difference = target.current - progress.current;
+      progress.current += difference * (1 - Math.exp(-dt / 48));
+      if (!auto.current && Math.abs(target.current - progress.current) < 0.0008)
+        progress.current = target.current;
+      const nextScene = progress.current >= COVER ? 1 : 0;
+      if (scene.current !== nextScene) {
+        scene.current = nextScene;
+        commit.current?.(nextScene);
+      }
+      paint(progress.current);
+      const moving = auto.current || progress.current !== target.current;
+      const inside = progress.current > 0 && progress.current < 1;
+      setPhase(inside || moving ? "scrubbing" : "idle");
+      if (moving) frame.current = requestAnimationFrame(update);
+      else {
+        frame.current = 0;
+        lastTime.current = 0;
+      }
+    },
+    [paint],
+  );
+
+  const wake = useCallback(() => {
+    setPhase("scrubbing");
+    if (!frame.current) frame.current = requestAnimationFrame(tick);
+  }, [tick]);
+
+  const input = useCallback(
+    (delta, onScene) => {
+      auto.current = null;
+      commit.current = onScene;
+      target.current = clamp(target.current + delta);
+      wake();
+      return target.current;
+    },
+    [wake],
+  );
+
+  const animateTo = useCallback(
+    (value, onScene) => {
+      commit.current = onScene;
+      auto.current = {
+        from: progress.current,
+        to: value,
+        start: performance.now(),
+        duration: 520 * Math.abs(value - progress.current) + 80,
+      };
+      wake();
+    },
+    [wake],
+  );
+
+  const reset = useCallback(
+    (value) => {
+      cancelAnimationFrame(frame.current);
+      frame.current = 0;
+      lastTime.current = 0;
+      auto.current = null;
+      progress.current = target.current = value;
+      scene.current = value >= COVER ? 1 : 0;
+      paint(value);
+      setPhase("idle");
+    },
+    [paint],
+  );
+
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  const engaged = useCallback(
+    () =>
+      !!auto.current ||
+      progress.current !== target.current ||
+      (progress.current > 0 && progress.current < 1),
+    [],
+  );
+  const refresh = useCallback(() => paint(progress.current), [paint]);
+  return {
+    layer,
+    surface,
+    phase,
+    expansion,
+    input,
+    animateTo,
+    reset,
+    engaged,
+    refresh,
+  };
 }

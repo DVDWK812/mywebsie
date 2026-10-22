@@ -1946,8 +1946,7 @@ svg {
 }
 .liquid-layer.is-active {
   z-index: 100;
-  pointer-events: auto;
-  touch-action: none;
+  pointer-events: none;
 }
 .liquid-surface {
   position: absolute;
@@ -1975,6 +1974,7 @@ svg {
   padding: 0 82px 0 72px;
 }
 .hero-layout {
+  opacity: var(--home-opacity, 1);
   height: 100%;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;

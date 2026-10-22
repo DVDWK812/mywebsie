@@ -4,7 +4,7 @@
 - 原作：Vincent van Gogh，The Starry Night（1889）。参考图来自 [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg)，该来源将原作复制图标为公有领域。
 - 改动：横向扩展画面，保留旋涡星空、金色星月、柏树与村庄、油画厚涂笔触；略调为午夜蓝，并让左侧更适合叠放真实 HTML 文案。网页再用独立渐变遮罩保证文案对比度。
 - 网站实际使用：`src/assets/starry-night-cloudsea.webp`（与生成图画面一致的 WebP 编码，非在线引用）。
-- 本地原图：`artwork/starry-night-cloudsea.png`；参考图：`artwork/starry-night-reference.jpg`。这两个大文件不上传仓库。
+- 制作期间的 PNG 原图与 JPG 参考图已清理；最终 WebP 素材保留在源码中，并内嵌进成品 HTML，直接打开时无需外部图片。
 
 ## 最终提示词
 

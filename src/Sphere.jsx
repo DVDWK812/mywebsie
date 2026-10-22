@@ -114,7 +114,8 @@ export default function Sphere({ expansion }) {
     sphere.rotation.set(0.12, 0, -0.2);
     scene.add(sphere);
     const resize = new ResizeObserver(() => {
-      const { width, height } = element.getBoundingClientRect();
+      const width = element.clientWidth,
+        height = element.clientHeight;
       renderer.setSize(width, height);
       renderer.getDrawingBufferSize(material.uniforms.uResolution.value);
       camera.aspect = width / height;
@@ -156,26 +157,10 @@ export default function Sphere({ expansion }) {
         sphere.position.y = Math.sin(elapsed * 0.9) * 0.025;
         sphere.scale.setScalar(1 + Math.sin(elapsed * 1.3) * 0.024);
         const transition = expansion?.current;
-        const bloom = transition?.active
-          ? Math.min(
-              1,
-              Math.max(0, (now - transition.startedAt) / transition.duration),
-            )
-          : 0;
-        material.uniforms.uBloom.value = bloom;
+        material.uniforms.uBloom.value = transition?.bloom ?? 0;
         material.uniforms.uOpeningExtent.value =
           transition?.openingExtent ?? 0.32;
-        const reveal =
-          transition?.active && transition.openingAt
-            ? Math.min(
-                1,
-                Math.max(
-                  0,
-                  (now - transition.openingAt) / transition.openingDuration,
-                ),
-              )
-            : 0;
-        material.uniforms.uReveal.value = 1 - Math.pow(1 - reveal, 2);
+        material.uniforms.uReveal.value = transition?.reveal ?? 0;
       }
       renderer.render(scene, camera);
       element.classList.add("is-rendered");
