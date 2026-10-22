@@ -53,7 +53,7 @@ export default function Chapters() {
   const [menu, setMenu] = useState(false);
   const [copyState, setCopyState] = useState("idle");
   const copyTimer = useRef(null);
-  const { layer, surface, phase, leaveHome } = useLiquidTransition();
+  const { layer, surface, phase, leaveHome, expansion } = useLiquidTransition();
   const { scroller, active, goTo } = useChapterScroll({ leaveHome });
   const t = text[lang];
   const labels = [
@@ -263,7 +263,7 @@ export default function Chapters() {
           <div className="hero-orb">
             <div className="liquid-surface" ref={surface}>
               <div className="orb-halo" />
-              <Sphere />
+              <Sphere expansion={expansion} />
             </div>
             <div className="orb-marker marker-top">
               <span />

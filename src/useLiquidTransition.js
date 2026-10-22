@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Enlarge the existing WebGL surface, then reveal the chapter beneath it.
+// A pressure wave opens the liquid from its core; the next chapter follows immediately.
 export default function useLiquidTransition() {
   const layer = useRef(null);
   const surface = useRef(null);
   const animations = useRef([]);
   const mounted = useRef(true);
+  const expansion = useRef({
+    active: false,
+    startedAt: 0,
+    duration: 660,
+    openingAt: 0,
+    openingDuration: 180,
+  });
   const [phase, setPhase] = useState("idle");
 
   useEffect(() => {
@@ -31,30 +38,60 @@ export default function useLiquidTransition() {
         (Math.min(rect.width, rect.height) * 0.58)) *
       1.12;
     setPhase("expanding");
+    expansion.current = {
+      active: true,
+      startedAt: performance.now(),
+      duration: 660,
+      openingAt: 0,
+      openingDuration: 180,
+      openingExtent:
+        (Math.hypot(innerWidth, innerHeight) / (rect.width * scale)) * 0.55 +
+        0.025,
+    };
     let navigated = false;
     try {
-      const expansion = orb.animate(
+      const swell = orb.animate(
         [
-          { transform: "translate3d(0, 0, 0) scale(1)" },
-          { transform: `translate3d(${x}px, ${y}px, 0) scale(${scale})` },
+          { transform: "translate3d(0, 0, 0) scale(1)", offset: 0 },
+          { transform: "translate3d(0, 0, 0) scale(.94, 1.035)", offset: 0.13 },
+          {
+            transform: `translate3d(${x * 0.16}px, ${y * 0.16}px, 0) scale(1.22, 1.12)`,
+            offset: 0.29,
+          },
+          {
+            transform: `translate3d(${x * 0.6}px, ${y * 0.6}px, 0) scale(${scale * 0.53}, ${scale * 0.58})`,
+            offset: 0.64,
+          },
+          {
+            transform: `translate3d(${x}px, ${y}px, 0) scale(${scale})`,
+            offset: 1,
+          },
         ],
         {
-          duration: 1050,
-          easing: "cubic-bezier(.55, 0, .15, 1)",
+          duration: expansion.current.duration,
+          easing: "cubic-bezier(.4, 0, .65, 1)",
           fill: "forwards",
         },
       );
-      animations.current = [expansion];
-      await expansion.finished;
+      animations.current = [swell];
+      await swell.finished;
       if (!mounted.current) return;
       navigate();
       navigated = true;
+      expansion.current.openingAt = performance.now();
       setPhase("revealing");
-      const reveal = overlay.animate([{ opacity: 1 }, { opacity: 0 }], {
-        duration: 380,
-        easing: "ease-out",
-        fill: "forwards",
-      });
+      const reveal = overlay.animate(
+        [
+          { opacity: 1, offset: 0 },
+          { opacity: 1, offset: 0.45 },
+          { opacity: 0, offset: 1 },
+        ],
+        {
+          duration: expansion.current.openingDuration,
+          easing: "ease-out",
+          fill: "forwards",
+        },
+      );
       animations.current.push(reveal);
       await reveal.finished;
     } catch {
@@ -66,7 +103,8 @@ export default function useLiquidTransition() {
       }
       animations.current.forEach((animation) => animation.cancel());
       animations.current = [];
+      expansion.current.active = false;
     }
   }, []);
-  return { layer, surface, phase, leaveHome };
+  return { layer, surface, phase, leaveHome, expansion };
 }
