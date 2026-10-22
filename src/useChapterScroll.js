@@ -6,29 +6,49 @@ export const CHAPTER_IDS = [
   "work",
   "sms-wechat",
   "cloudsea",
-  "about",
   "contact",
 ];
 
 // Native touch snapping; one wheel gesture or navigation key advances one chapter.
-export default function useChapterScroll() {
+export default function useChapterScroll({ leaveHome } = {}) {
   const scroller = useRef(null);
   const current = useRef(0);
+  const busy = useRef(false);
   const [active, setActive] = useState(0);
   const reduced = useReducedMotion();
   const goTo = useCallback(
     (index, instant = false) => {
       const root = scroller.current;
-      if (!root) return;
+      if (!root || busy.current) return;
       const next = Math.max(0, Math.min(CHAPTER_IDS.length - 1, index));
-      current.current = next;
-      setActive(next);
-      root.scrollTo({
-        top: next * root.clientHeight,
-        behavior: instant || reduced ? "instant" : "smooth",
-      });
+      const position = (immediate) => {
+        current.current = next;
+        setActive(next);
+        root.scrollTo({
+          top: next * root.clientHeight,
+          behavior: immediate || reduced ? "instant" : "smooth",
+        });
+      };
+      if (
+        current.current === 0 &&
+        next > 0 &&
+        !instant &&
+        !reduced &&
+        leaveHome
+      ) {
+        busy.current = true;
+        root.scrollTo({ top: 0, behavior: "instant" });
+        Promise.resolve(
+          leaveHome(() => {
+            position(true);
+            history.replaceState(null, "", `#${CHAPTER_IDS[next]}`);
+          }),
+        ).finally(() => {
+          busy.current = false;
+        });
+      } else position(instant);
     },
-    [reduced],
+    [reduced, leaveHome],
   );
 
   useEffect(() => {
@@ -46,7 +66,7 @@ export default function useChapterScroll() {
       } catch {
         id = "home";
       }
-      const index = CHAPTER_IDS.indexOf(id);
+      const index = CHAPTER_IDS.indexOf(id === "about" ? "home" : id);
       goTo(index < 0 ? 0 : index, true);
     };
     const canScrollInside = (target, direction) => {
@@ -70,6 +90,10 @@ export default function useChapterScroll() {
       )
         return;
       const direction = Math.sign(event.deltaY);
+      if (busy.current) {
+        event.preventDefault();
+        return;
+      }
       if (canScrollInside(event.target, direction)) return;
       event.preventDefault();
       const now = performance.now();
@@ -130,6 +154,7 @@ export default function useChapterScroll() {
       }
     };
     const onScroll = () => {
+      if (busy.current) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const index = Math.max(
@@ -149,11 +174,56 @@ export default function useChapterScroll() {
         }, 150);
       });
     };
+    let touch = null;
+    const onTouchStart = (event) => {
+      if (event.touches.length !== 1) {
+        touch = null;
+        return;
+      }
+      const point = event.touches[0];
+      touch = {
+        x: point.clientX,
+        y: point.clientY,
+        target: event.target,
+        home: current.current === 0,
+        used: false,
+      };
+    };
+    const onTouchMove = (event) => {
+      if (busy.current) {
+        event.preventDefault();
+        return;
+      }
+      if (
+        !touch ||
+        event.touches.length !== 1 ||
+        !touch.home ||
+        reduced ||
+        !leaveHome
+      )
+        return;
+      const point = event.touches[0];
+      const dy = touch.y - point.clientY;
+      const dx = Math.abs(touch.x - point.clientX);
+      if (dy <= 0 || dy < dx || canScrollInside(touch.target, 1)) return;
+      event.preventDefault();
+      if (dy > 45 && !touch.used) {
+        touch.used = true;
+        goTo(1);
+      }
+    };
+    const onTouchEnd = () => {
+      touch = null;
+    };
     const initial = requestAnimationFrame(readHash);
     const resize = new ResizeObserver(() => goTo(current.current, true));
     resize.observe(root);
     root.addEventListener("wheel", onWheel, { passive: false });
     root.addEventListener("scroll", onScroll, { passive: true });
+    root.addEventListener("touchstart", onTouchStart, { passive: true });
+    root.addEventListener("touchmove", onTouchMove, { passive: false });
+    root.addEventListener("touchend", onTouchEnd);
+    root.addEventListener("touchcancel", onTouchEnd);
     window.addEventListener("keydown", onKey);
     window.addEventListener("hashchange", readHash);
     window.addEventListener("popstate", readHash);
@@ -164,10 +234,14 @@ export default function useChapterScroll() {
       resize.disconnect();
       root.removeEventListener("wheel", onWheel);
       root.removeEventListener("scroll", onScroll);
+      root.removeEventListener("touchstart", onTouchStart);
+      root.removeEventListener("touchmove", onTouchMove);
+      root.removeEventListener("touchend", onTouchEnd);
+      root.removeEventListener("touchcancel", onTouchEnd);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("hashchange", readHash);
       window.removeEventListener("popstate", readHash);
     };
-  }, [goTo, reduced]);
+  }, [goTo, reduced, leaveHome]);
   return { scroller, active, goTo };
 }

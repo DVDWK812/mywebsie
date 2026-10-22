@@ -22,6 +22,7 @@ import {
 } from "./components";
 import text from "./content";
 import useChapterScroll, { CHAPTER_IDS } from "./useChapterScroll";
+import useLiquidTransition from "./useLiquidTransition";
 
 function ChapterReveal({ active, children, className = "" }) {
   const reduced = useReducedMotion();
@@ -52,15 +53,16 @@ export default function Chapters() {
   const [menu, setMenu] = useState(false);
   const [copyState, setCopyState] = useState("idle");
   const copyTimer = useRef(null);
-  const { scroller, active, goTo } = useChapterScroll();
+  const { layer, surface, phase, leaveHome } = useLiquidTransition();
+  const { scroller, active, goTo } = useChapterScroll({ leaveHome });
   const t = text[lang];
   const labels = [
     lang === "zh" ? "首页" : "Home",
     ...t.projectTitles,
-    t.sectionAbout,
     t.sectionContact,
   ];
-  const nav = ["work", "about", "contact"];
+  const nav = ["home", "work", "contact"];
+  const navLabels = [labels[0], t.nav[0], t.nav[2]];
   const links = [
     "https://github.com/DVDWK812/local-mahjong",
     "https://github.com/DVDWK812/sms-wechat-bridge",
@@ -124,7 +126,7 @@ export default function Chapters() {
       scroller.current?.focus({ preventScroll: true });
       return;
     }
-    const index = CHAPTER_IDS.indexOf(id);
+    const index = CHAPTER_IDS.indexOf(id === "about" ? "home" : id);
     if (index < 0) return;
     event.preventDefault();
     setMenu(false);
@@ -134,7 +136,11 @@ export default function Chapters() {
   const next = Math.min(active + 1, CHAPTER_IDS.length - 1);
 
   return (
-    <div className={`site lang-${lang}`} onClick={navigate}>
+    <div
+      className={`site lang-${lang}`}
+      data-liquid-phase={phase}
+      onClick={navigate}
+    >
       <a className="skip-link" href="#main">
         {t.skip}
       </a>
@@ -190,7 +196,7 @@ export default function Chapters() {
               key={id}
               className={
                 (
-                  i === 0
+                  id === "work"
                     ? active >= 1 && active <= 3
                     : CHAPTER_IDS[active] === id
                 )
@@ -199,7 +205,7 @@ export default function Chapters() {
               }
               href={`#${id}`}
             >
-              <span>{t.nav[i]}</span>
+              <span>{navLabels[i]}</span>
             </a>
           ))}
         </nav>
@@ -248,6 +254,28 @@ export default function Chapters() {
           ))}
         </nav>
       )}
+      {(active === 0 || phase !== "idle") && (
+        <div
+          ref={layer}
+          className={`liquid-layer ${phase !== "idle" ? "is-active" : ""}`}
+          aria-hidden="true"
+        >
+          <div className="hero-orb">
+            <div className="liquid-surface" ref={surface}>
+              <div className="orb-halo" />
+              <Sphere />
+            </div>
+            <div className="orb-marker marker-top">
+              <span />
+              PYTHON / SQL
+            </div>
+            <div className="orb-marker marker-bottom">
+              TOOLS & GAMES
+              <span />
+            </div>
+          </div>
+        </div>
+      )}
       <main
         id="main"
         className="chapter-scroller"
@@ -264,41 +292,49 @@ export default function Chapters() {
           id="home"
           aria-labelledby="hero-title"
         >
-          <div className="hero-orb">
-            <div className="orb-halo" />
-            <Sphere />
-            <div className="orb-marker marker-top">
-              <span />
-              PYTHON / SQL
-            </div>
-            <div className="orb-marker marker-bottom">
-              TOOLS & GAMES
-              <span />
-            </div>
-          </div>
-          <ChapterReveal active={active === 0} className="hero-copy">
-            <div className="eyebrow">
-              <span className="tiny-line" />
-              {t.name}
-              <span className="eyebrow-separator">/</span>
-              <span>{lang === "zh" ? "WENKAI HUANG" : "黄文凯"}</span>
-            </div>
-            <h1 id="hero-title">
-              <span>{t.heroTop}</span>
-              <span>
-                {t.heroPrefix}
-                <Decoder words={t.words} lang={lang} />
-              </span>
-            </h1>
-            <p className="hero-intro">{t.intro}</p>
-            <a className="text-link" href="#work">
-              {t.explore}
-              <ArrowUpRight size={20} />
-            </a>
-          </ChapterReveal>
-          <div className="hero-signature">
-            DATA. TOOLS. GAMES.
-            <span />
+          <div className="hero-layout">
+            <ChapterReveal active={active === 0} className="hero-copy">
+              <div className="eyebrow">
+                <span className="tiny-line" />
+                {t.name}
+                <span className="eyebrow-separator">/</span>
+                <span>{lang === "zh" ? "WENKAI HUANG" : "黄文凯"}</span>
+              </div>
+              <h1 id="hero-title">
+                <span>{t.heroTop}</span>
+                <span>
+                  {t.heroPrefix}
+                  <Decoder words={t.words} lang={lang} />
+                </span>
+              </h1>
+              <a className="text-link" href="#work">
+                {t.explore}
+                <ArrowUpRight size={20} />
+              </a>
+            </ChapterReveal>
+            <ChapterReveal active={active === 0} className="hero-about">
+              <div className="hero-about-scroll" id="about" data-chapter-scroll>
+                <div className="hero-about-intro">
+                  <h2>{t.aboutTitle}</h2>
+                  <p>{t.aboutText}</p>
+                </div>
+                <div className="hero-about-interests">
+                  <p className="micro-label">{t.skillsLabel}</p>
+                  <div className="skill-list">
+                    {t.skills.map((skill, i) => (
+                      <span key={skill}>
+                        <small>0{i + 1}</small>
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="about-foot">
+                    <span className="signal-dot" />
+                    {t.aboutFoot}
+                  </p>
+                </div>
+              </div>
+            </ChapterReveal>
           </div>
         </section>
         {t.projectTitles.map((title, i) => (
@@ -360,59 +396,17 @@ export default function Chapters() {
           </section>
         ))}
         <section
-          className="chapter about-section"
-          id="about"
-          aria-labelledby="about-title"
-        >
-          <div className="about-watermark" aria-hidden="true">{`{ }`}</div>
-          <ChapterReveal
-            active={active === 4}
-            className="chapter-body about-content"
-          >
-            <div className="body-scroll" data-chapter-scroll>
-              <div className="section-kicker">
-                <span>04</span>ABOUT ME
-              </div>
-              <h2 id="about-title">{t.aboutTitle}</h2>
-              <p className="about-body">{t.aboutText}</p>
-              <div className="skills">
-                <p className="micro-label">{t.skillsLabel}</p>
-                <div className="skill-list">
-                  {t.skills.map((skill, i) => (
-                    <span key={i}>
-                      <small>0{i + 1}</small>
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <p className="about-foot">
-                <span className="signal-dot" />
-                {t.aboutFoot}
-              </p>
-            </div>
-          </ChapterReveal>
-          <div className="about-symbol" aria-hidden="true">
-            <span>
-              {"{"}
-              <i />
-              {"}"}
-            </span>
-            <div>DATA × PLAY</div>
-          </div>
-        </section>
-        <section
           className="chapter contact-section"
           id="contact"
           aria-labelledby="contact-title"
         >
           <ChapterReveal
-            active={active === 5}
+            active={active === 4}
             className="chapter-body contact-content"
           >
             <div className="body-scroll" data-chapter-scroll>
               <div className="section-kicker">
-                <span>05</span>GET IN TOUCH
+                <span>04</span>GET IN TOUCH
               </div>
               <h2 id="contact-title">
                 {t.contactTitle}
@@ -506,7 +500,8 @@ export default function Chapters() {
         <div className="chapter-count">
           <span>{String(active + 1).padStart(2, "0")}</span>
           <i />
-          06<small>{labels[active]}</small>
+          {String(CHAPTER_IDS.length).padStart(2, "0")}
+          <small>{labels[active]}</small>
         </div>
         <div className="chapter-buttons">
           <button
@@ -522,7 +517,7 @@ export default function Chapters() {
             onClick={() => goTo(next)}
             disabled={active === CHAPTER_IDS.length - 1}
             aria-label={
-              active === 5
+              active === CHAPTER_IDS.length - 1
                 ? lang === "zh"
                   ? "已是最后一章"
                   : "Last chapter"
@@ -541,8 +536,8 @@ export default function Chapters() {
         />
       </div>
       <span className="sr-only" role="status" aria-live="polite">
-        {lang === "zh" ? "当前章节" : "Current chapter"} {active + 1} / 6:{" "}
-        {labels[active]}
+        {lang === "zh" ? "当前章节" : "Current chapter"} {active + 1} /{" "}
+        {CHAPTER_IDS.length}: {labels[active]}
       </span>
     </div>
   );
