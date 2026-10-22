@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useReducedMotion } from "motion/react";
 import { ArrowRight, Mail } from "lucide-react";
+import starryNight from "./assets/starry-night-cloudsea.webp";
 
 function Decoder({ words, lang }) {
   const element = useRef(null);
@@ -75,18 +76,10 @@ function MahjongArt() {
       <div className="table-circle circle-two" />
       <div className="tile tile-left">
         <span>發</span>
-        <small>MAHJONG</small>
       </div>
-      <div className="tile tile-center">
-        <div className="tile-dots">
-          {Array.from({ length: 6 }, (_, i) => (
-            <i key={i} />
-          ))}
-        </div>
-      </div>
+      <div className="tile tile-center tile-white" />
       <div className="tile tile-right">
         <span>中</span>
-        <small>MAHJONG</small>
       </div>
       <div className="art-bottom">
         <span>立直 · 血战到底 · 国标</span>
@@ -135,14 +128,14 @@ function CloudseaArt() {
   return (
     <div className="project-art cloudsea-art" aria-hidden="true">
       <span className="art-corner">CLOUDSEA FRONTIER</span>
-      <div className="landscape-sun" />
-      <div className="mountain mountain-back" />
-      <div className="mountain mountain-mid" />
-      <div className="sea-mist" />
-      <div className="mountain mountain-front" />
-      <div className="landscape-title">
-        云海拓荒<span>CLOUDSEA FRONTIER</span>
-      </div>
+      <img
+        className="starry-night-image"
+        src={starryNight}
+        alt=""
+        width="1672"
+        height="941"
+        decoding="async"
+      />
       <div className="art-bottom">
         <span>SURVIVAL / EXPLORATION</span>
         <span>云 · 海</span>

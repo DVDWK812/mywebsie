@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   ArrowUpRight,
-  ArrowDown,
-  ArrowUp,
   Github,
   Linkedin,
   Mail,
@@ -133,7 +131,7 @@ export default function Chapters() {
     if (location.hash !== `#${id}`) history.pushState(null, "", `#${id}`);
     goTo(index);
   }
-  const next = active === CHAPTER_IDS.length - 1 ? 0 : active + 1;
+  const next = Math.min(active + 1, CHAPTER_IDS.length - 1);
 
   return (
     <div className={`site lang-${lang}`} onClick={navigate}>
@@ -512,32 +510,28 @@ export default function Chapters() {
         </div>
         <div className="chapter-buttons">
           <button
-            className="previous-chapter"
+            className="chapter-arrow previous-chapter"
             onClick={() => goTo(active - 1)}
             disabled={active === 0}
             aria-label={lang === "zh" ? "上一章节" : "Previous chapter"}
           >
-            <ChevronUp size={17} />
+            <ChevronUp size={18} />
           </button>
           <button
-            className="next-chapter"
+            className="chapter-arrow next-chapter"
             onClick={() => goTo(next)}
+            disabled={active === CHAPTER_IDS.length - 1}
             aria-label={
               active === 5
-                ? t.back
+                ? lang === "zh"
+                  ? "已是最后一章"
+                  : "Last chapter"
                 : lang === "zh"
                   ? `下一章节：${labels[next]}`
                   : `Next chapter: ${labels[next]}`
             }
           >
-            <span>
-              {active === 5
-                ? t.back
-                : lang === "zh"
-                  ? "下一章节"
-                  : "NEXT CHAPTER"}
-            </span>
-            {active === 5 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+            <ChevronDown size={18} />
           </button>
         </div>
       </div>
