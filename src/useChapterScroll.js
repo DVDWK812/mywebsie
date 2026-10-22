@@ -60,7 +60,8 @@ export default function useChapterScroll(liquid) {
       lastWheel = 0,
       total = 0,
       lockedUntil = 0,
-      usedGesture = false;
+      usedGesture = false,
+      wheelOwner = null;
     const readHash = () => {
       let id;
       try {
@@ -102,8 +103,15 @@ export default function useChapterScroll(liquid) {
       if (now - lastWheel > 180) {
         total = 0;
         usedGesture = false;
+        wheelOwner = null;
       }
       lastWheel = now;
+      // Momentum belongs to the chapter where the gesture began. Arriving at
+      // Mahjong must not turn that same gesture into a second trip to Home.
+      if (wheelOwner === "chapter" && usedGesture) return;
+      if (now < lockedUntil && wheelOwner !== "liquid") return;
+      if (!wheelOwner)
+        wheelOwner = scrubbable(direction) ? "liquid" : "chapter";
       const delta =
         event.deltaY *
         (event.deltaMode === 1
@@ -111,7 +119,7 @@ export default function useChapterScroll(liquid) {
           : event.deltaMode === 2
             ? root.clientHeight
             : 1);
-      if (scrubbable(direction)) {
+      if (wheelOwner === "liquid" && scrubbable(direction)) {
         // Keep a long wheel event from skipping the entire reversible timeline.
         const next = input(
           Math.max(-180, Math.min(180, delta)) / SCRUB_DISTANCE,
@@ -201,6 +209,7 @@ export default function useChapterScroll(liquid) {
         y: p.clientY,
         target: event.target,
         handled: false,
+        owner: current.current > 1 ? "chapter" : null,
       };
     };
     const onTouchMove = (event) => {
@@ -210,6 +219,11 @@ export default function useChapterScroll(liquid) {
         dx = Math.abs(touch.x - p.clientX);
       touch.x = p.clientX;
       touch.y = p.clientY;
+      if (touch.owner === "chapter") return;
+      if (dy && Math.abs(dy) >= dx && !touch.owner) {
+        touch.owner = scrubbable(Math.sign(dy)) ? "liquid" : "chapter";
+        if (touch.owner === "chapter") return;
+      }
       if (
         !dy ||
         Math.abs(dy) < dx ||
