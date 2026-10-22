@@ -32,9 +32,9 @@ const text = {
     worksLabel: "SELECTED WORK",
     projectTitles: ["本地麻将游戏", "sms-wechat-bridge", "云海拓荒"],
     descriptions: [
-      "一个本地麻将训练器，包含立直麻将、血战到底、国标麻将。",
+      "一款面向本地对局与练习的 3D 麻将游戏，支持四人立直与 17 步模式，集成 AI 对手、AI 语音、听牌提示和多视角牌谱回放，方便练习与复盘；血战到底、三人立直和国标麻将处于后续开发规划中。",
       "自动转发手机端短信信息到指定微信聊天。",
-      "一款生存类游戏。",
+      "一款开发中的单机 2D 像素空岛生存游戏，以“打捞—制造—扩建”为核心循环：通过渔网获取随机物资，制作工具并扩建岛屿，结合种植、集水、仓储和天气系统，逐步建立可持续的食水与资源供给。",
     ],
     categories: ["游戏 / 麻将训练器", "工具 / 信息桥接", "游戏 / 生存探索"],
     repo: "查看 GitHub",
@@ -74,9 +74,9 @@ const text = {
     worksLabel: "SELECTED WORK",
     projectTitles: ["Local Mahjong", "sms-wechat-bridge", "Cloudsea Frontier"],
     descriptions: [
-      "A local mahjong trainer featuring Riichi, Sichuan Blood Battle, and Chinese Standard Mahjong.",
+      "A 3D mahjong game for local play and practice, featuring four-player Riichi and 17-step modes, AI opponents, AI voice, tenpai guidance and multi-perspective replay study. Sichuan Blood Battle, three-player Riichi and Chinese Standard Mahjong are planned for future development.",
       "Automatically forwards SMS messages from a phone to a specified WeChat chat.",
-      "A survival game.",
+      "A single-player 2D pixel-art sky-island survival game in development, built around salvaging, crafting and expansion. Use nets to gather random supplies, craft tools and expand your island, then establish sustainable food, water and resource production through farming, water collection and storage as the weather changes.",
     ],
     categories: [
       "GAME / MAHJONG TRAINER",
