@@ -19,10 +19,18 @@ import {
   MahjongArt,
   BridgeArt,
   CloudseaArt,
+  FinScopeArt,
 } from "./components";
-import text from "./content";
+import text, { projects } from "./content";
 import useChapterScroll, { CHAPTER_IDS } from "./useChapterScroll";
 import useLiquidTransition from "./useLiquidTransition";
+
+const projectArt = {
+  work: MahjongArt,
+  "sms-wechat": BridgeArt,
+  cloudsea: CloudseaArt,
+  finscope: FinScopeArt,
+};
 
 function ChapterReveal({
   active,
@@ -64,17 +72,11 @@ export default function Chapters() {
   const t = text[lang];
   const labels = [
     lang === "zh" ? "首页" : "Home",
-    ...t.projectTitles,
+    ...projects.map(({ id }) => t.projects[id].title),
     t.sectionContact,
   ];
   const nav = ["home", "work", "contact"];
   const navLabels = [labels[0], t.nav[0], t.nav[2]];
-  const links = [
-    "https://github.com/DVDWK812/local-mahjong",
-    "https://github.com/DVDWK812/sms-wechat-bridge",
-    null,
-  ];
-  const arts = [<MahjongArt />, <BridgeArt />, <CloudseaArt />];
 
   useEffect(() => {
     document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
@@ -203,7 +205,7 @@ export default function Chapters() {
               className={
                 (
                   id === "work"
-                    ? active >= 1 && active <= 3
+                    ? active >= 1 && active <= projects.length
                     : CHAPTER_IDS[active] === id
                 )
                   ? "active"
@@ -349,77 +351,85 @@ export default function Chapters() {
             </ChapterReveal>
           </div>
         </section>
-        {t.projectTitles.map((title, i) => (
-          <section
-            className={`chapter project-chapter project-${i + 1}`}
-            id={CHAPTER_IDS[i + 1]}
-            key={i}
-            aria-labelledby={`project-title-${i}`}
-          >
-            <article className="project-scene">
-              <div className="chapter-art" aria-hidden="true">
-                {arts[i]}
-              </div>
-              <div className="scene-shade" aria-hidden="true" />
-              <span className="scene-index" aria-hidden="true">
-                0{i + 1}
-                <span>/ 03</span>
-              </span>
-              <ChapterReveal
-                active={active === i + 1}
-                immediate={phase !== "idle"}
-                className="project-overlay"
-              >
-                <div className="project-copy" data-chapter-scroll>
-                  <p className="project-category">
-                    <span className="tiny-line" />
-                    {t.categories[i]}
-                  </p>
-                  <h2 id={`project-title-${i}`}>{title}</h2>
-                  <p className="project-description">{t.descriptions[i]}</p>
-                  {links[i] ? (
-                    <a
-                      className="text-link"
-                      href={links[i]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t.repo}
-                      <ArrowUpRight size={20} />
-                    </a>
-                  ) : (
-                    <span className="unlinked-project">
-                      <span className="signal-dot" />
-                      {t.noLink}
-                    </span>
-                  )}
+        {projects.map(({ id, repo, showcase, caption }, i) => {
+          const { title, category, description } = t.projects[id];
+          const Art = projectArt[id];
+          const links = [
+            { href: showcase, label: t.showcase },
+            { href: repo, label: t.repo },
+          ].filter(({ href }) => href);
+          return (
+            <section
+              className={`chapter project-chapter project-${i + 1}`}
+              id={id}
+              key={id}
+              aria-labelledby={`project-title-${id}`}
+            >
+              <article className="project-scene">
+                <div className="chapter-art" aria-hidden="true">
+                  <Art />
                 </div>
-              </ChapterReveal>
-              <div className="scene-caption" aria-hidden="true">
-                <span>{t.worksLabel}</span>
-                <span>
-                  {i === 0
-                    ? "MAHJONG / 3D"
-                    : i === 1
-                      ? "SMS / WECHAT"
-                      : "CLOUDSEA / SURVIVAL"}
+                <div className="scene-shade" aria-hidden="true" />
+                <span className="scene-index" aria-hidden="true">
+                  {String(i + 1).padStart(2, "0")}
+                  <span>/ {String(projects.length).padStart(2, "0")}</span>
                 </span>
-              </div>
-            </article>
-          </section>
-        ))}
+                <ChapterReveal
+                  active={active === i + 1}
+                  immediate={phase !== "idle"}
+                  className="project-overlay"
+                >
+                  <div className="project-copy" data-chapter-scroll>
+                    <p className="project-category">
+                      <span className="tiny-line" />
+                      {category}
+                    </p>
+                    <h2 id={`project-title-${id}`}>{title}</h2>
+                    <p className="project-description">{description}</p>
+                    {links.length ? (
+                      <div className="project-links">
+                        {links.map(({ href, label }) => (
+                          <a
+                            className="text-link"
+                            key={href}
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {label}
+                            <ArrowUpRight size={20} />
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="unlinked-project">
+                        <span className="signal-dot" />
+                        {t.noLink}
+                      </span>
+                    )}
+                  </div>
+                </ChapterReveal>
+                <div className="scene-caption" aria-hidden="true">
+                  <span>{t.worksLabel}</span>
+                  <span>{caption}</span>
+                </div>
+              </article>
+            </section>
+          );
+        })}
         <section
           className="chapter contact-section"
           id="contact"
           aria-labelledby="contact-title"
         >
           <ChapterReveal
-            active={active === 4}
+            active={active === CHAPTER_IDS.length - 1}
             className="chapter-body contact-content"
           >
             <div className="body-scroll" data-chapter-scroll>
               <div className="section-kicker">
-                <span>04</span>GET IN TOUCH
+                <span>{String(projects.length + 1).padStart(2, "0")}</span>GET
+                IN TOUCH
               </div>
               <h2 id="contact-title">
                 {t.contactTitle}

@@ -144,4 +144,162 @@ function CloudseaArt() {
   );
 }
 
-export { Decoder, Logo, MahjongArt, BridgeArt, CloudseaArt };
+function FinScopeArt() {
+  const signals = [
+    [302, 126],
+    [414, 99],
+    [525, 126],
+    [546, 230],
+    [464, 278],
+    [330, 253],
+    [281, 206],
+  ];
+  return (
+    <div className="project-art finscope-art" aria-hidden="true">
+      <svg className="finscope-graphic" viewBox="0 0 640 410" fill="none">
+        <defs>
+          <linearGradient
+            id="fs-panel"
+            x1="176"
+            y1="45"
+            x2="588"
+            y2="351"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stopColor="#192f35" />
+            <stop offset="1" stopColor="#0a1a22" />
+          </linearGradient>
+          <radialGradient id="fs-hub">
+            <stop stopColor="#174b4b" />
+            <stop offset="1" stopColor="#0e232a" />
+          </radialGradient>
+          <pattern
+            id="fs-grid"
+            width="19"
+            height="19"
+            patternUnits="userSpaceOnUse"
+          >
+            <path d="M19 0H0V19" stroke="#81dfc7" strokeOpacity=".1" />
+          </pattern>
+        </defs>
+        <path
+          d="M70 65h64M102 33v64M548 370h53M574 343v54"
+          stroke="#9ae8ce"
+          strokeOpacity=".25"
+        />
+        <rect
+          x="176"
+          y="39"
+          width="424"
+          height="313"
+          rx="19"
+          fill="url(#fs-panel)"
+          stroke="#4b7774"
+        />
+        <rect
+          x="191"
+          y="81"
+          width="394"
+          height="255"
+          rx="10"
+          fill="url(#fs-grid)"
+        />
+        <path d="M176 77h424" stroke="#456763" strokeOpacity=".58" />
+        <circle cx="199" cy="58" r="3" fill="#92efd1" />
+        <text x="211" y="61" fill="#acd2c9" className="fs-art-label">
+          FINSCOPE / ANALYSIS WORKSPACE
+        </text>
+        <text
+          x="576"
+          y="61"
+          fill="#8ad4bd"
+          textAnchor="end"
+          className="fs-art-label"
+        >
+          LOCAL
+        </text>
+        <circle
+          cx="414"
+          cy="183"
+          r="108"
+          stroke="#70c9b3"
+          strokeOpacity=".15"
+        />
+        <circle
+          cx="414"
+          cy="183"
+          r="77"
+          stroke="#70c9b3"
+          strokeOpacity=".22"
+          strokeDasharray="3 6"
+        />
+        {signals.map(([x, y]) => (
+          <g key={`${x}-${y}`}>
+            <path
+              d={`M414 183L${x} ${y}`}
+              stroke="#76cbb5"
+              strokeOpacity=".43"
+            />
+            <circle cx={x} cy={y} r="11" fill="#122e34" stroke="#438b80" />
+            <circle cx={x} cy={y} r="3.3" fill="#91dfc7" />
+          </g>
+        ))}
+        <circle cx="414" cy="183" r="47" fill="url(#fs-hub)" stroke="#8bedd0" />
+        <path
+          d="M386 186h11l6-12 9 23 9-30 8 19h13"
+          stroke="#9cf1d7"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <rect
+          x="32"
+          y="108"
+          width="203"
+          height="170"
+          rx="13"
+          fill="#0e2129"
+          stroke="#547b78"
+        />
+        <text x="51" y="133" fill="#a9d3ca" className="fs-art-label">
+          NEWS EXPLORER
+        </text>
+        {[155, 189, 223].map((y, i) => (
+          <g key={y}>
+            <rect x="49" y={y} width="168" height="26" rx="5" fill="#1b3239" />
+            <circle
+              cx="62"
+              cy={y + 13}
+              r="3"
+              fill={i === 1 ? "#abc4db" : "#8bdcc4"}
+            />
+            <path
+              d={`M75 ${y + 10}h${[80, 102, 68][i]}m${-[80, 102, 68][i]} 7h${[51, 57, 44][i]}`}
+              stroke="#81a6a6"
+              strokeOpacity=".72"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </g>
+        ))}
+        <rect
+          x="345"
+          y="304"
+          width="214"
+          height="60"
+          rx="10"
+          fill="#112a31"
+          stroke="#4b827c"
+        />
+        <text x="362" y="323" fill="#92cbbd" className="fs-art-label">
+          LOCAL MODELS
+        </text>
+        <text x="362" y="348" fill="#dcf3ec" className="fs-art-model">
+          FinBERT + MiniLM
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+export { Decoder, Logo, MahjongArt, BridgeArt, CloudseaArt, FinScopeArt };

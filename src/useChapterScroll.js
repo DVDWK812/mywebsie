@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
+import { projects } from "./content";
 
-export const CHAPTER_IDS = [
-  "home",
-  "work",
-  "sms-wechat",
-  "cloudsea",
-  "contact",
-];
+export const CHAPTER_IDS = ["home", ...projects.map(({ id }) => id), "contact"];
 
 // The same signed distance drives expansion and retraction on every device.
 const SCRUB_DISTANCE = 360;

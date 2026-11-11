@@ -574,6 +574,29 @@ svg {
 .project-3 .project-scene {
   background: #273d3c;
 }
+#finscope .project-scene {
+  background: #0e1d25;
+}
+.finscope-art {
+  background:
+    radial-gradient(ellipse at 72% 44%, #235051, transparent 66%),
+    linear-gradient(145deg, #10242b, #101d28 73%);
+}
+.finscope-graphic {
+  position: absolute;
+  width: min(64%, 780px);
+  height: auto;
+  top: 50%;
+  right: 1%;
+  transform: translateY(-50%);
+}
+.fs-art-label {
+  font: 9px monospace;
+  letter-spacing: 1.2px;
+}
+.fs-art-model {
+  font: 15px monospace;
+}
 .chapter-art,
 .chapter-art .project-art {
   position: absolute;
@@ -621,6 +644,17 @@ svg {
       transparent 85%
     ),
     linear-gradient(0deg, #07101cb0, transparent 65%);
+}
+#finscope .scene-shade {
+  background:
+    linear-gradient(
+      90deg,
+      #0a171ff9,
+      #0a171fe8 24%,
+      #0a171f70 48%,
+      transparent 76%
+    ),
+    linear-gradient(0deg, #0a171f9e, transparent 34%);
 }
 .scene-index {
   position: absolute;
@@ -699,6 +733,15 @@ svg {
 }
 .project-overlay .text-link {
   font-size: 11px;
+}
+.project-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+}
+#finscope .project-links .text-link:first-child {
+  color: #a5efd9;
 }
 .unlinked-project {
   display: flex;
@@ -1472,6 +1515,21 @@ svg {
       #0c1b3065 64%,
       transparent 90%
     );
+  }
+  #finscope .scene-shade {
+    background: linear-gradient(
+      0deg,
+      #0a171fff,
+      #0a171ff2 35%,
+      #0a171f45 69%,
+      transparent 92%
+    );
+  }
+  .finscope-graphic {
+    width: min(96%, 460px);
+    top: 8%;
+    right: 50%;
+    transform: translateX(50%);
   }
   .chapter-art .tile {
     width: min(20%, 100px);
